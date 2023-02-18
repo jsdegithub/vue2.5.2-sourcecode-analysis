@@ -1825,6 +1825,7 @@ function withMacroTask (fn) {
 
 function nextTick (cb, ctx) {
   var _resolve;
+  //将传入的cb回调函数包裹后，推入callbacks数组中
   callbacks.push(function () {
     if (cb) {
       try {

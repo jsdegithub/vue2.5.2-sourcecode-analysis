@@ -5,16 +5,20 @@ var uid = 0;
  * and fires callback when the expression value changes.
  * This is used for both the $watch() api and directives.
  */
+// vm就是调用this.$watch的this
+// expOrFn可以
 var Watcher = function Watcher(vm, expOrFn, cb, options) {
   this.vm = vm;
   vm._watchers.push(this);
   // options
   if (options) {
+    // 转换成布尔值
     this.deep = !!options.deep;
     this.user = !!options.user;
     this.lazy = !!options.lazy;
     this.sync = !!options.sync;
   } else {
+    // 如果没传options，则赋予默认值false
     this.deep = this.user = this.lazy = this.sync = false;
   }
   this.cb = cb;
@@ -44,6 +48,7 @@ var Watcher = function Watcher(vm, expOrFn, cb, options) {
         );
     }
   }
+  // lazy默认为false，所以默认执行 this.get()
   this.value = this.lazy ? undefined : this.get();
 };
 
@@ -80,12 +85,14 @@ Watcher.prototype.get = function get() {
 Dep.target = null;
 var targetStack = [];
 
-function pushTarget (_target) {
-  if (Dep.target) { targetStack.push(Dep.target); }
+function pushTarget(_target) {
+  if (Dep.target) {
+    targetStack.push(Dep.target);
+  }
   Dep.target = _target;
 }
 
-function popTarget () {
+function popTarget() {
   Dep.target = targetStack.pop();
 }
 
@@ -166,7 +173,7 @@ var index = 0;
  * Jobs with duplicate IDs will be skipped unless it's
  * pushed when the queue is being flushed.
  */
- function queueWatcher (watcher) {
+function queueWatcher(watcher) {
   var id = watcher.id;
   // 如果watcher已经在队列中，则不再重复添加
   if (has[id] == null) {
@@ -195,7 +202,7 @@ var index = 0;
 /**
  * Flush both queues and run the watchers.
  */
- function flushSchedulerQueue () {
+function flushSchedulerQueue() {
   flushing = true;
   var watcher, id;
 
@@ -207,7 +214,9 @@ var index = 0;
   //    user watchers are created before the render watcher)
   // 3. If a component is destroyed during a parent component's watcher run,
   //    its watchers can be skipped.
-  queue.sort(function (a, b) { return a.id - b.id; });
+  queue.sort(function (a, b) {
+    return a.id - b.id;
+  });
 
   // do not cache length because more watchers might be pushed
   // as we run existing watchers
@@ -217,18 +226,17 @@ var index = 0;
     has[id] = null;
     watcher.run();
     // in dev build, check and stop circular updates.
-    if ("development" !== 'production' && has[id] != null) {
+    if ("development" !== "production" && has[id] != null) {
       circular[id] = (circular[id] || 0) + 1;
       if (circular[id] > MAX_UPDATE_COUNT) {
         warn(
-          'You may have an infinite update loop ' + (
-            watcher.user
-              ? ("in watcher with expression \"" + (watcher.expression) + "\"")
-              : "in a component render function."
-          ),
+          "You may have an infinite update loop " +
+            (watcher.user
+              ? 'in watcher with expression "' + watcher.expression + '"'
+              : "in a component render function."),
           watcher.vm
         );
-        break
+        break;
       }
     }
   }
@@ -246,7 +254,7 @@ var index = 0;
   // devtool hook
   /* istanbul ignore if */
   if (devtools && config.devtools) {
-    devtools.emit('flush');
+    devtools.emit("flush");
   }
 }
 
