@@ -1,3 +1,9 @@
+// public mount method
+Vue$3.prototype.$mount = function (el, hydrating) {
+  el = el && inBrowser ? query(el) : undefined;
+  return mountComponent(this, el, hydrating);
+};
+
 var mount = Vue$3.prototype.$mount;
 Vue$3.prototype.$mount = function (el, hydrating) {
   el = el && query(el);

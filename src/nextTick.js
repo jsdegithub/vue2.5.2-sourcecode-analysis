@@ -105,6 +105,7 @@ function nextTick(cb, ctx) {
       _resolve(ctx);
     }
   });
+  // pending的默认值是false，所以默认会执行if内的语句
   if (!pending) {
     pending = true;
     // useMacroTask默认为false，所以默认使用微任务

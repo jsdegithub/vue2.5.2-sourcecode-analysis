@@ -1,5 +1,18 @@
+/**
+ * By default, when a reactive property is set, the new value is
+ * also converted to become reactive. However when passing down props,
+ * we don't want to force conversion because the value may be a nested value
+ * under a frozen data structure. Converting it would defeat the optimization.
+ */
+/** observerState是个全局对象，observerState.shouldConvert用来控制数据是否应该被转换为响应式  */
+var observerState = {
+  shouldConvert: true,
+};
+
 function initInjections(vm) {
+  /** resolveInject函数的作用是通过用户配置的inject，自底向上搜索可用的注入内容，并将搜索结果返回  */
   var result = resolveInject(vm.$options.inject, vm);
+  /** 如果有可用的注入内容，就把它们挂载到当前vm实例上，这样，就可以直接使用this.xxx调用了  */
   if (result) {
     observerState.shouldConvert = false;
     Object.keys(result).forEach(function (key) {
