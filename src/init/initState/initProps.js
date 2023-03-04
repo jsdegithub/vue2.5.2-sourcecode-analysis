@@ -97,3 +97,84 @@ function validateProp(key, propOptions, propsData, vm) {
   }
   return value;
 }
+
+/**
+ * Assert whether a prop is valid.
+ */
+function assertProp(prop, name, value, vm, absent) {
+  /**
+   * 如果子组件中对prop的要求是必须的，但是父组件并没有传递这个prop，
+   * 那么就会在控制台打印出警告信息：Missing required prop: "xxx"
+   */
+  if (prop.required && absent) {
+    warn('Missing required prop: "' + name + '"', vm);
+    return;
+  }
+  /**
+   * 如果子组件并没有要求该prop是必须的，且父组件也没有传递这个prop，
+   * 而仅仅是在子组件中声明了这个prop，那么不会有任何警告信息。
+   * 这种情况下，value的值就是undefined/null，所以在子组件中通过this.propName
+   * 使用该prop时，会得到undefined/null。
+   */
+  if (value == null && !prop.required) {
+    return;
+  }
+  /** 这个prop.type就是我们在子组件中定义的prop的类型 */
+  var type = prop.type;
+  /** 如果type没传，则取valid为true => 类型校验成功 */
+  /** 如果type为true，也认为校验成功 */
+  /**
+   * 如果type传了，那么此时的type应该是一个原生的构造函数或是一个数组，
+   * 里面的元素都是原生的构造函数，比如：String、Number、Boolean、Array、Object、Date、Function、Symbol，
+   * 或者是自定义的构造函数，比如：Vue.component('child', { props: ['propName'] })中的child组件。
+   * 那么此时valid取false
+   *
+   */
+  var valid = !type || type === true;
+  var expectedTypes = [];
+  if (type) {
+    if (!Array.isArray(type)) {
+      type = [type];
+    }
+    /** 遍历type数组，当遍历完毕或valid为true时退出循环 */
+    for (var i = 0; i < type.length && !valid; i++) {
+      /**
+       * assertType函数校验后会返回一个对象，该对象有两个属性valid和expectedType，
+       * 前者表示是否校验成功，后者表示类型，例如：
+       * {valid:true, expectedType: "Boolean"}。
+       */
+      var assertedType = assertType(value, type[i]);
+      expectedTypes.push(assertedType.expectedType || "");
+      valid = assertedType.valid;
+    }
+  }
+  /**
+   * 如果type数组遍历完毕，valid仍然为false，则说明父组件传递的prop类型在子组件该prop的type数组中
+   * 没有找到，所以最终valid应该为false，此时断定校验失败，打印警告信息。
+   */
+  if (!valid) {
+    warn(
+      'Invalid prop: type check failed for prop "' +
+        name +
+        '".' +
+        " Expected " +
+        expectedTypes.map(capitalize).join(", ") +
+        ", got " +
+        toRawType(value) +
+        ".",
+      vm
+    );
+    /** 这里需要注意，类型校验失败后打印警告信息后，程序结束，不会再执行用户自定义的validator */
+    return;
+  }
+  /** 获取用户自定义的validator */
+  var validator = prop.validator;
+  if (validator) {
+    /**
+     * 如果validator返回false（这个false是用户自定义的validator中返回的），
+     * 则说明校验失败，打印警告信息 */
+    if (!validator(value)) {
+      warn('Invalid prop: custom validator check failed for prop "' + name + '".', vm);
+    }
+  }
+}
