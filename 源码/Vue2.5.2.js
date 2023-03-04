@@ -3484,6 +3484,16 @@
       for (var i = 0; i < keys.length; i++) {
         var key = keys[i];
         var provideKey = inject[key].from;
+        /**
+         * 最开始source等于当前组件实例，如果原始属性在source的_provided中能找到对应的值，
+         * 那么将其设置到result中，并使用break跳出循环。否则，将source设置为父组件实例进行
+         * 下一轮循环，以此类推。
+         */
+        /**
+         * 注意当父组件使用provide注入内容时，其实是将内容注入到当前组件实例的_provided中，
+         * 所以inject可以从父组件实例的_provided中获取注入的内容。通过这样的方式，
+         * 最终会在祖先组件中搜索到inject中设置的所有属性的内容。
+         */
         var source = vm;
         while (source) {
           if (source._provided && provideKey in source._provided) {
@@ -3492,6 +3502,10 @@
           }
           source = source.$parent;
         }
+        /**
+         * 如果循环结束后，source仍然为null，那么说明没有找到对应的值，那么就使用default属性
+         * 作为默认值，如果default属性也不存在，那么就报错。
+         */
         if (!source) {
           if ("default" in inject[key]) {
             var provideDefault = inject[key].default;
