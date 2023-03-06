@@ -25,6 +25,11 @@ function defineReactive(obj, key, val, customSetter, shallow) {
       }
     *其中，protoAugment方法对数组方法进行拦截，实现了对数组变动的监听。
     */
+  /**  递归监听  */
+  /**
+   * 若val是一个数组，显然，childObj=new Observer(val)，
+   * childObj是当前数组的Observer实例
+   */
   var childOb = !shallow && observe(val);
 
   Object.defineProperty(obj, key, {
@@ -34,10 +39,17 @@ function defineReactive(obj, key, val, customSetter, shallow) {
       /** 如果getter不存在，就直接从val取值 */
       var value = getter ? getter.call(obj) : val;
       if (Dep.target) {
+        /**
+         * 这里是为this.arr=newArr收集依赖
+         */
         dep.depend();
         /** 虽然对象在这一步重复收集了依赖，但是在setter中只触发dep.notify，并不会触发在这步多收集的依赖 */
         /** 只有在数组的7种方法中才会触发这一步收集到childOb.dep上的依赖 */
         if (childOb) {
+          /**
+           * 这里是为数组的七种改变原数组的方法收集依赖，
+           * 即：push、pop、shift、unshift、splice、reverse、sort
+           */
           childOb.dep.depend();
           if (Array.isArray(value)) {
             dependArray(value);
