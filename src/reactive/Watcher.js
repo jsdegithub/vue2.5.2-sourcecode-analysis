@@ -7,14 +7,17 @@ var uid = 0;
  */
 // vm就是调用this.$watch的this
 // expOrFn可以
+/** 这个vm是从$watcher传递过来的，而$watcher上的vm是调用$watcher的vue实例 */
 var Watcher = function Watcher(vm, expOrFn, cb, options) {
   // 将该watcher所属的vm实例赋值给该watcher实例的this.vm属性
   this.vm = vm;
-  // 每一个watcher都会被推入到vm._watchers列表中
+  // 每一个watcher都会被推入到vm._watchers列表中，包括选项中的watch和$watcher中实例化的watcher
+  // this就是该watcher实例
   vm._watchers.push(this);
   // options
   if (options) {
     // 转换成布尔值
+    /** 注意这里没有immediate，因为immediate不是在这里处理的 */
     this.deep = !!options.deep;
     this.user = !!options.user;
     this.lazy = !!options.lazy;
@@ -27,6 +30,12 @@ var Watcher = function Watcher(vm, expOrFn, cb, options) {
   this.id = ++uid; // uid for batching
   this.active = true;
   this.dirty = this.lazy; // for lazy watchers
+  /**
+   * 这个deps列表存储了所有收集了该watcher的dep实例，而每一个dep实例又是为某个属性收集依赖，
+   * 也就是说，这些属性中的任何一个发生变化，都会通知它自己的subs列表，而subs列表取出所有存储
+   * 的watcher，调用watcher.update。
+   *
+   */
   this.deps = [];
   this.newDeps = [];
   this.depIds = new _Set();
@@ -64,6 +73,31 @@ Watcher.prototype.get = function get() {
   var vm = this.vm;
   try {
     // 获取值，这时会触发属性的getter，从而将Dep.target收集到该属性的依赖列表
+    /**
+     * 第一个vm是给computed函数里的this用的，第二个vm是给parsePath(expOrFn)返回的函数用的，
+     * 参照parthPath的返回值，它的入参是obj，其实就是vm
+     * return function (obj) {
+     *  for (var i = 0; i < segments.length; i++) {
+     *  if (!obj) {
+     *   return;
+     *  }
+     *  obj = obj[segments[i]];
+     *  }
+     * return obj;
+     * };
+     */
+    /**
+     * 这里我们需要注意一个点：
+     * 当expOrFn是一个computed函数时，可能它是这样的：
+     * computedData(){
+     *  return this.a + this.b
+     * }
+     * 那么在调用this.getter.call(vm, vm)时，this.a和this.b都会被读取，
+     * 这时pushTarget已经被执行，所以window.target是有值的，所以此时读取的任何data都会将
+     * 当前的watcher实例收集进它的依赖列表，所以今后这些data有任何一个变动都会导致当前watcher调用
+     * update方法更新视图，但这显然不是我们想要的，因为computed的最终值可能压根就没有发生变化，
+     * 这个点正是后续vue版本修复的内容。
+     */
     value = this.getter.call(vm, vm);
   } catch (e) {
     if (this.user) {
