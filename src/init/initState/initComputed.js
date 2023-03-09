@@ -1,5 +1,6 @@
 var computedWatcherOptions = { lazy: true };
 
+/** 这个vm就是组件实例 */
 function initComputed(vm, computed) {
   var watchers = (vm._computedWatchers = Object.create(null));
   // computed properties are just getters during SSR
@@ -19,6 +20,11 @@ function initComputed(vm, computed) {
 
     if (!isSSR) {
       // create internal watcher for the computed property.
+      /**
+       * 新new出来的watcher将会被getter中用到的data的依赖列表收集。
+       * 也就是说，在new Watcher的时候，computed watcher就已经被添加到了computed data依赖项
+       * 的依赖列表中(准确说并不是new watcher时就添加了，而是第一次读取computed值时)。
+       */
       watchers[key] = new Watcher(vm, getter || noop, noop, computedWatcherOptions);
     }
 
@@ -43,7 +49,7 @@ function initComputed(vm, computed) {
   }
 }
 
-/** 这是一个默认的属性描述符 */
+/** 这是一个默认的存取描述符 */
 var sharedPropertyDefinition = {
   enumerable: true,
   configurable: true,
@@ -51,6 +57,7 @@ var sharedPropertyDefinition = {
   set: noop,
 };
 
+/** 这个target就是组件实例 */
 function defineComputed(target, key, userDef) {
   /** shouldCache的初始值是true */
   var shouldCache = !isServerRendering();
@@ -99,10 +106,28 @@ function createComputedGetter(key) {
        *   }
        * };
        */
+      /**
+       * evaluate调用时会调用watcher.get，而watcher.get会调用pushTarget,
+       * pushTarget会将当前watcher挂到Dep.target上，然后读取value，触发getter，
+       * 进行依赖收集后，会调用popTarget弹出当前watcher。
+       */
       if (watcher.dirty) {
         watcher.evaluate();
       }
+      /**
+       * 疑问：这个Dep.target是哪个watcher?
+       * 注意：这个watcher并不是上一步中的watcher, 而应该是上一步中
+       * watcher.evaluate调用后从targetStack中pop出来的watcher，
+       * 这个watcher其实就是组件的渲染watcher。
+       */
       if (Dep.target) {
+        /**
+         * 令所有收集了此watcher的dep实例调用depend方法，将Dep.target也收集到其依赖列表中
+         * 为什么要这么做？
+         * 因为computed并没有setter，他没有通知变更重新渲染的能力，但是它的依赖有setter能
+         * 通知组件数据已变更，从而触发重新渲染，所以要借助computed的依赖来实现computed变更
+         * 后的界面的响应式更新。
+         */
         watcher.depend();
       }
       return watcher.value;

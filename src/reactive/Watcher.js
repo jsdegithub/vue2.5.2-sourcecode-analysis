@@ -60,6 +60,11 @@ var Watcher = function Watcher(vm, expOrFn, cb, options) {
     }
   }
   // lazy默认为false，所以默认执行 this.get()
+  /**
+   * 注意：
+   * 当lazy为true，也就是computed的情况，
+   * 此时在new watcher阶段，
+   */
   this.value = this.lazy ? undefined : this.get();
 };
 
@@ -380,8 +385,15 @@ Watcher.prototype.evaluate = function evaluate() {
 Watcher.prototype.depend = function depend() {
   var _this = this;
 
+  /**
+   * this.deps是计算属性中用到的所有状态的dep实例
+   */
   var i = this.deps.length;
   while (i--) {
+    /**
+     * Dep.prototype.depend的作用是将Dep.target上的watcher实例
+     * 添加到dep实例的依赖列表dep.subs中
+     */
     _this.deps[i].depend();
   }
 };
