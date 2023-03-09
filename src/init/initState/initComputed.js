@@ -122,7 +122,7 @@ function createComputedGetter(key) {
        */
       if (Dep.target) {
         /**
-         * 令所有收集了此watcher的dep实例调用depend方法，将Dep.target也收集到其依赖列表中
+         * 令所有收集了此watcher的dep实例（其实就是computed的几个依赖项的dep）调用depend方法，将Dep.target也收集到其依赖列表中
          * 为什么要这么做？
          * 因为computed并没有setter，他没有通知变更重新渲染的能力，但是它的依赖有setter能
          * 通知组件数据已变更，从而触发重新渲染，所以要借助computed的依赖来实现computed变更
