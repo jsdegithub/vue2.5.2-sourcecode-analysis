@@ -116,7 +116,15 @@ Watcher.prototype.get = function get() {
     if (this.deep) {
       traverse(value);
     }
-    // 收集完毕，将 Dep.target 置空
+    // 收集完毕，将当前Dep.target弹出
+    /**
+     * 既然收集依赖完就popTarget了，那么组件watcher的依赖收集是怎么做的呢？
+     * 首先，new Watcher的时候，会调用get方法，在get方法中，会调用pushTarget，
+     * 之后会调用getter，而渲染watcher的getter是updateComponent，所以此时是执行updateComponent
+     * 方法，而在执行updateComponent方法时，会读取所有模板中用到的data，并且对所有这些data进行new Watcher，
+     * 此时会调用watcher.get方法，而watcher.get方法中又会调用pushTarget，将当前watcher实例放到Dep.target上，
+     * 然后触发data的getter，将当前watcher实例收集进data的依赖列表
+     */
     popTarget();
     this.cleanupDeps();
   }
@@ -327,6 +335,14 @@ function flushSchedulerQueue() {
  * Scheduler job interface.
  * Will be called by the scheduler.
  */
+/**
+ * run函数中是怎么触发组件jian的更新的？
+ * 1. 在组件的render函数中，会调用this._s(name)方法，这个方法会调用watcher的get方法
+ * 2. watcher的get方法会调用getter方法，getter方法会调用pushTarget方法，将当前watcher
+ *   添加到Dep.target中
+ * 3. 在getter方法中，会调用this.data[name]，这个过程会触发属性的getter方法，这个getter方法
+ *  会调用Dep.target.addDep(this)，将当前属性的dep添加到watcher的deps中
+ */
 Watcher.prototype.run = function run() {
   // 如果watcher处于激活状态，则执行watcher的get方法（调用tearDown方法会将active置为false）
   // 这个active主要是用来控制watcher的激活与禁用，给tearDown用的
@@ -336,6 +352,15 @@ Watcher.prototype.run = function run() {
      * 注意这个value是this.data中的最新data，也就是newVal。例子：
      * 如 this.name='jinshuo'，这个过程是同步的，下面的 var value = this.get() 获取的
      * 就是最新的name值 => 'jinshuo'
+     */
+    /**
+     * 这里执行的get方法会在其内部调用getter，如果是渲染watcher，
+     * 那么这个getter就是updateComponent方法，也就是说当watcher.run的watcher是渲染watcher时，
+     * 这里执行get方法其实就是执行的updateComponent方法，从而触发组件的重新渲染。
+     * 那么数据更新时，组件的watcher是怎么得到通知的呢？
+     */
+    /**
+     * 组件watcher是怎么被收集到data的依赖列表中的呢？
      */
     var value = this.get();
     if (
@@ -361,9 +386,9 @@ Watcher.prototype.run = function run() {
           handleError(e, this.vm, 'callback for watcher "' + this.expression + '"');
         }
       } else {
-        // 这里就是执行我们在this.$watch中传入的回调函数，也是在这里传入了newVal和oldVal
-        // 如果是渲染watcher，执行渲染watcher的回调函数
-        // 也就是执行updateComponent方法，从而触发组件的render方法
+        /**
+         * 这里就是执行我们在this.$watch中传入的回调函数，也是在这里传入了newVal和oldVal
+         */
         this.cb.call(this.vm, value, oldValue);
       }
     }

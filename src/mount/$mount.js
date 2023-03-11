@@ -9,6 +9,9 @@ Vue$3.prototype.$mount = function (el, hydrating) {
   el = el && query(el);
 
   /* istanbul ignore if */
+  /**
+   * el不能是body或者html元素
+   */
   if (el === document.body || el === document.documentElement) {
     "development" !== "production" && warn("Do not mount Vue to <html> or <body> - mount to normal elements instead.");
     return this;
@@ -16,8 +19,14 @@ Vue$3.prototype.$mount = function (el, hydrating) {
 
   var options = this.$options;
   // resolve template/el and convert to render function
+  /**
+   * 如果没有传render函数
+   */
   if (!options.render) {
     var template = options.template;
+    /**
+     * 如果传了template,那么就会把template编译成render函数
+     */
     if (template) {
       if (typeof template === "string") {
         if (template.charAt(0) === "#") {
@@ -36,8 +45,14 @@ Vue$3.prototype.$mount = function (el, hydrating) {
         return this;
       }
     } else if (el) {
+      /**
+       * 如果render和template都没有传，那么就会把el的outerHTML作为template
+       */
       template = getOuterHTML(el);
     }
+    /**
+     * 获取template后，调用compileToFunctions方法，将template编译成render函数
+     */
     if (template) {
       /* istanbul ignore if */
       if ("development" !== "production" && config.performance && mark) {

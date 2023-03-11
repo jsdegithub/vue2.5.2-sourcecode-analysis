@@ -120,13 +120,41 @@ function createComputedGetter(key) {
        * watcher.evaluate调用后从targetStack中pop出来的watcher，
        * 这个watcher其实就是组件的渲染watcher。
        */
+      /**
+       * 当computed data被首次读取时，一定是在updateComponent中读取的
+       * （
+       * 此时Dep.target是组件的渲染watcher => 为什么？
+       * 因为updateComponent执行时，它是作为new Watcher时调用get时的getter执行的，而在getter
+       * 执行前，有一步pushTarget已经将当前组件的渲染watcher推到Dep.target上，所以updateComponent
+       * 执行时，Dep.target是渲染watcher。此时: watcherStack=[]，Dep.target=渲染watcher
+       * ），
+       * 此时先判断watcher.dirty，初始时watcher.dirty为true, 所以会执行
+       * watcher.evaluate，evaluate中会执行get（注意这是第一次执行get，因为computed data在
+       * new Watcher时会因为lazy值为true而不执行get），在get中：
+       * ==============================================================================
+       * 1、pushTarget将当前computed watcher推入watcherStack;
+       * 此时: watcherStack=[渲染watcher]，Dep.target=computedWatcher
+       * 2、调用getter也就是computed函数获取computed值，但由于调用computed函数又会读取其中依赖
+       * 的data，所以会触发这些依赖的getter，从而将当前computed watcher收集进它们的依赖列表中，
+       * 这样当后续依赖的data发生变化时，就会通知到computed watcher, computed watcher调用其
+       * update方法，在update方法中设置dirty为true, 这样当再次读取computed值时，由于dirty为
+       * true，所以就会触发watcher.evaluate重新计算；
+       * 3、读取完毕后再调用popTarget将computed watcher弹出，
+       * 此时: watcherStack=[]，Dep.target=渲染watcher
+       * ==============================================================================
+       * get调用完毕后，evaluate会将watcher.dirty又置为false, 这样后续data没变动时读取computed
+       * 将直接返回缓存值。
+       */
+      /**
+       * Dep.target就是渲染watcher，所以在这里会将渲染watcher收集到
+       * 所有computed data依赖的data的dep.subs中，也就是该data的依赖列表中。
+       * 注：当data变化时，先通知computedWatcher调用update变更dirty为true;
+       * 再通知渲染watcher重新读取computed值，并更新页面。
+       */
       if (Dep.target) {
         /**
-         * 令所有收集了此watcher的dep实例（其实就是computed的几个依赖项的dep）调用depend方法，将Dep.target也收集到其依赖列表中
-         * 为什么要这么做？
-         * 因为computed并没有setter，他没有通知变更重新渲染的能力，但是它的依赖有setter能
-         * 通知组件数据已变更，从而触发重新渲染，所以要借助computed的依赖来实现computed变更
-         * 后的界面的响应式更新。
+         * 令所有收集了此watcher的dep实例（其实就是computed的几个依赖项的dep）调用depend方法，
+         * 将Dep.target也收集到其依赖列表中（注意：这个Dep.target就是渲染watcher）。
          */
         watcher.depend();
       }
