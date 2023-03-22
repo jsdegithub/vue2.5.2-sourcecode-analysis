@@ -128,8 +128,8 @@ function createComputedGetter(key) {
        * 执行前，有一步pushTarget已经将当前组件的渲染watcher推到Dep.target上，所以updateComponent
        * 执行时，Dep.target是渲染watcher。此时: watcherStack=[]，Dep.target=渲染watcher
        * ），
-       * 此时先判断watcher.dirty，初始时watcher.dirty为true, 所以会执行
-       * watcher.evaluate，evaluate中会执行get（注意这是第一次执行get，因为computed data在
+       * 此时先判断watcher.dirty，初始时watcher.dirty为true, 所以会执行watcher.evaluate，
+       * evaluate中会执行get（注意这是第一次执行get，因为computed data在
        * new Watcher时会因为lazy值为true而不执行get），在get中：
        * ==============================================================================
        * 1、pushTarget将当前computed watcher推入watcherStack;

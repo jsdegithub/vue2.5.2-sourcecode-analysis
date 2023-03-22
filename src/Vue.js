@@ -4,3 +4,9 @@ function Vue$3(options) {
   }
   this._init(options);
 }
+
+initMixin(Vue$3);
+stateMixin(Vue$3);
+eventsMixin(Vue$3);
+lifecycleMixin(Vue$3);
+renderMixin(Vue$3);
