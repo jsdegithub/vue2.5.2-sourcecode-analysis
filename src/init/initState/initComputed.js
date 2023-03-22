@@ -156,6 +156,28 @@ function createComputedGetter(key) {
          * 令所有收集了此watcher的dep实例（其实就是computed的几个依赖项的dep）调用depend方法，
          * 将Dep.target也收集到其依赖列表中（注意：这个Dep.target就是渲染watcher）。
          */
+        /**
+         * 特殊情况：当computed嵌套computed时，假设computed1还依赖着computed2，而computed2依赖
+         * 属性a。
+         * 那么当computed1被访问时，触发computed1的computtedGetter，在computtedGetter中会调用
+         * watcher.evaluate方法，而evaluate方法会调用watcher.get,get会将computed1的watcher推
+         * 入stack中，然后调用getter(就是computed1函数)，由于computed1依赖computed2，所以又会触
+         * 发computed2的computtedGetter，在computed2的computtedGetter中，又会调用get方法，将
+         * computed2的watcher推入stack中，然后调用getter(也就是computed2函数)，由于computed2依
+         * 赖a，所以会读取a，此时a的getter被触发，所以a会将当前的Dep.target放入依赖列表
+         * （就是computed2的watcher）,最后popTarget将computed2的watcher弹出stack，此时evaluate
+         * 调用完毕，然后是if(Dep.target){ watcher.depend() }, 注意此时Dep.target是computed1的
+         * watcher,而watcher.depend的watcher则是computed2的watcher,这一句的作用就是让收集了
+         * computed2 watcher的所有属性再将computed1 watcher收集进它们的依赖列表中，这样，computed2
+         * 的依赖就已经收集了computed2 watcher和computed1 watcher。此时，computed1的getter执行完毕。
+         * 接下来，回到computed1的popTarget阶段，弹出computed1 watcher, 这样computed1的evaluate
+         * 也执行完毕，进入到if(Dep.target){ watcher.depend() }, 注意此时Dep.target是组件的
+         * 渲染watcher,而watcher.depend的watcher则是computed1的watcher,这一句的作用就是让收集了
+         * computed1 watcher的所有属性再将组件的渲染watcher收集进它们的依赖列表中，这样，computed2的
+         * 依赖就已经收集了computed2 watcher、computed1 watcher和组件的渲染watcher;
+         * 这样当后续computed2的依赖变动时，他会将computed2、computed1的dirty置为true，最后调用组件
+         * 渲染watcher的update方法，读取最新的computed2、computed1的值，渲染最新的页面。
+         */
         watcher.depend();
       }
       return watcher.value;
