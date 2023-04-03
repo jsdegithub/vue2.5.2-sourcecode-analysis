@@ -1,4 +1,7 @@
 function mountComponent(vm, el, hydrating) {
+  /**
+   * 初始化挂载时是有el的，如：new Vue({...}).$mount(el), 所以vm.$el也会有值。
+   */
   vm.$el = el;
   /**
    * 在runtime-only版本中，若没有传render函数，那么就会将createEmptyVNode赋值给render
@@ -52,6 +55,9 @@ function mountComponent(vm, el, hydrating) {
     };
   } else {
     updateComponent = function () {
+      /**
+       * 初始挂载时，vm上是有$el的，所以_update中能拿到vm.$el
+       */
       vm._update(vm._render(), hydrating);
     };
   }

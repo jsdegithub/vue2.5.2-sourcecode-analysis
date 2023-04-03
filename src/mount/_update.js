@@ -3,7 +3,13 @@ Vue.prototype._update = function (vnode, hydrating) {
   if (vm._isMounted) {
     callHook(vm, "beforeUpdate");
   }
+  /**
+   * 初始挂载时，vm上是有$el的，所以_update中能拿到vm.$el
+   */
   var prevEl = vm.$el;
+  /**
+   * 初始挂载时，vm._vnode是undefined
+   */
   var prevVnode = vm._vnode;
   var prevActiveInstance = activeInstance;
   activeInstance = vm;
@@ -36,7 +42,6 @@ Vue.prototype._update = function (vnode, hydrating) {
         vm.$el = vm.__patch__(prevVnode, vnode);
       }
     };
-
     根据 _update.js可知：初始渲染时，prevVnode为空，所以执行 if(!prevVnode) 语句中的逻辑；
 
     patch.js
@@ -56,8 +61,7 @@ Vue.prototype._update = function (vnode, hydrating) {
         return patchVnode(oldVNode, vnode)
       }
     }
-
-    由patch.js可知：当oldVnode为空时，走if(!oldVnode)中的逻辑，进而执行createElm(vnode)；
+    初始时，vm.$el有值（就是vm.$mount(el)中的el），又由patch.js可知： 当oldVnode有值时（此时oldVnode=el），且此时的el是一个真实的元素节点，所以走if(isRealElement)中的逻辑，最终会执行createElm(vnode)；
 
     createElm.js
     function createElm(vnode) {
@@ -76,16 +80,19 @@ Vue.prototype._update = function (vnode, hydrating) {
       }
       return vnode.el;
     }
-
-    进而执行
+    进入到createElm(vnode)，执行vnode.el = document.createElement(tag)，此句创建对应的真实元素并将其赋给vnode.el，进而执行
     children.forEach((child) => {
       vnode.el.appendChild(createElm(child));
     });
-    这里再次执行createElm(child)，此时child是组件，进入以下逻辑
+    这里再次执行createElm(child)，此时child是组件，进入以下逻辑：
     if (createComponent(vnode)) {
       return vnode.componentInstance.$el;
     }
     再回到上层，执行vnode.el.appendChild(createElm(child))，从而将组件返回的$el元素append到它的父元素上。
+    最后，回到patch.js的以下两句：
+    parentElm.insertBefore(newElm, elm.nextSibling)
+    parentElm.removeChild(elm)
+    将依据vnode创建的新元素插入到页面中。
 
     createComponent.js
     function createComponent(vnode) {
@@ -110,6 +117,10 @@ Vue.prototype._update = function (vnode, hydrating) {
     }
    */
 
+  /**
+   * 如果prevVnode为undefined，说明是初始挂载，那么就不需要对比新老vnode了，直接
+   * 将vnode渲染成真实dom，然后挂载到vm.$el对应的Dom元素上
+   */
   if (!prevVnode) {
     // initial render
     vm.$el = vm.__patch__(
