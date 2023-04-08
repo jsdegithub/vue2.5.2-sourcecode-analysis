@@ -30,6 +30,10 @@ function defineReactive(obj, key, val, customSetter, shallow) {
    * 若val是一个数组，显然，childObj=new Observer(val)，
    * childObj是当前数组的Observer实例
    */
+  /**
+   * 这句实际上是用来判断val是否仍然是一个对象类型，如果是则继续递归监听；
+   * 并且，要注意的是，除了递归监听，还会为当前对象收集依赖
+   */
   var childOb = !shallow && observe(val);
 
   Object.defineProperty(obj, key, {
@@ -49,6 +53,11 @@ function defineReactive(obj, key, val, customSetter, shallow) {
           /**
            * 这里是为数组的七种改变原数组的方法收集依赖，
            * 即：push、pop、shift、unshift、splice、reverse、sort
+           * 为什么要使用childOb上的dep再收集一遍依赖呢？
+           * 因为defineReactive中的dep，数组方法中是拿不到的，而通常我们调用数组方法时，
+           * 都是通过arr.push()这样的方式调用的，所以可以拿到arr.__ob__.dep，所以就可以通过
+           * 将依赖收集到arr.__ob__.dep上，从而为数组方法收集依赖。
+           * 这样，当数组方法被调用时，就能拿到arr.__ob__.dep，从而调用dep.notify()。
            */
           childOb.dep.depend();
           if (Array.isArray(value)) {
